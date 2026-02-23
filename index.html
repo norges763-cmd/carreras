@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carreras | Santiago de Cuba</title>
+    
+    <style>
+        :root { --accent: #f3b01a; --bg: #121212; --card: #1e1e1e; --text: #ffffff; }
+        body { margin: 0; font-family: sans-serif; background: var(--bg); color: var(--text); }
+        
+        header { 
+            background: var(--accent); color: black; padding: 15px; 
+            text-align: center; font-weight: bold; font-size: 1.2em;
+            position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+        }
+        
+        .container { padding: 15px; }
+        
+        .status-bar { 
+            background: #222; padding: 12px; border-radius: 8px; 
+            margin-bottom: 15px; font-size: 0.9em; border-left: 4px solid var(--accent);
+            display: flex; justify-content: space-between; align-items: center;
+        }
+
+        /* Lista de Choferes */
+        .chofer-card { 
+            background: var(--card); border-radius: 12px; padding: 15px; 
+            margin-bottom: 12px; display: flex; justify-content: space-between; 
+            align-items: center; border: 1px solid #333;
+            animation: fadeIn 0.5s ease;
+        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .info b { display: block; font-size: 1.1em; color: var(--accent); margin-bottom: 4px; }
+        .info span { color: #888; font-size: 0.85em; }
+        
+        .btn-call { 
+            background: #28a745; color: white; text-decoration: none; 
+            padding: 12px 20px; border-radius: 8px; font-weight: bold; 
+            font-size: 0.9em; transition: 0.3s;
+        }
+        .btn-call:active { transform: scale(0.95); background: #218838; }
+
+        /* Panel del Chofer Inferior */
+        .driver-panel {
+            position: fixed; bottom: 0; width: 100%; background: #181818; 
+            padding: 15px; box-sizing: border-box; border-top: 2px solid var(--accent);
+            box-shadow: 0 -5px 15px rgba(0,0,0,0.5);
+        }
+        .btn-toggle {
+            width: 100%; padding: 15px; border: none; border-radius: 10px;
+            font-weight: bold; cursor: pointer; font-size: 1em; transition: 0.3s;
+        }
+        .off { background: #444; color: white; }
+        .on { background: var(--accent); color: black; box-shadow: 0 0 15px var(--accent); }
+    </style>
+</head>
+<body>
+
+<header>CARRERAS SANTIAGO</header>
+
+<div class="container">
+    <div class="status-bar">
+        <span id="status-msg">Ubicando GPS...</span>
+        <span id="loader">📍</span>
+    </div>
+    
+    <div id="lista-choferes">
+        </div>
+</div>
+
+<div style="height: 110px;"></div>
+
+<div class="driver-panel">
+    <button id="main-toggle" class="btn-toggle off" onclick="toggleModoChofer()">
+        ACTIVAR MODO CHOFER (ESTOY DISPONIBLE)
+    </button>
+</div>
+
+<script>
+    let modoChoferActivo = false;
+    let watchID = null;
+
+    // 1. DATOS DE PRUEBA (Esto luego vendrá de la base de datos)
+    const choferesEnSantiago = [
+        { id: 1, nombre: "Yoel Estrada", tipo: "Moto", tel: "+5350000000", lat: 20.0215, lng: -75.8294 },
+        { id: 2, nombre: "Carlos Lada", tipo: "Auto", tel: "+5351111111", lat: 20.0310, lng: -75.8210 },
+        { id: 3, nombre: "Dania VIP", tipo: "Auto Moderno", tel: "+5352222222", lat: 20.0150, lng: -75.8350 },
+        { id: 4, nombre: "Pepe Motorina", tipo: "Moto", tel: "+5353333333", lat: 20.0250, lng: -75.8150 }
+    ];
+
+    // 2. CÁLCULO DE DISTANCIA
+    function calcularDistancia(lat1, lon1, lat2, lon2) {
+        const R = 6371; // Radio de la Tierra en km
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLon = (lon2 - lon1) * Math.PI / 180;
+        const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                  Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon/2) * Math.sin(dLon/2);
+        return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
+    }
+
+    // 3. ACTUALIZAR INTERFAZ
+    function actualizarLista(miLat, miLng) {
+        const listaDiv = document.getElementById("lista-choferes");
+        const statusMsg = document.getElementById("status-msg");
+
+        // Ordenar choferes por cercanía
+        const ordenados = choferesEnSantiago
+            .map(ch => ({ ...ch, dist: calcularDistancia(miLat, miLng, ch.lat, ch.lng) }))
+            .sort((a, b) => a.dist - b.dist);
+
+        statusMsg.innerText = `Cerca de ti (${ordenados.length} disponibles)`;
+        
+        listaDiv.innerHTML = ordenados.map(ch => `
+            <div class="chofer-card">
+                <div class="info">
+                    <b>${ch.nombre}</b>
+                    <span>${ch.tipo} • A ${ch.dist.toFixed(2)} km</span>
+                </div>
+                <a href="tel:${ch.tel}" class="btn-call">LLAMAR</a>
+            </div>
+        `).join('');
+    }
+
+    // 4. LÓGICA MODO CHOFER
+    function toggleModoChofer() {
+        const btn = document.getElementById("main-toggle");
+        modoChoferActivo = !modoChoferActivo;
+
+        if (modoChoferActivo) {
+            btn.innerText = "TRANSMITIENDO UBICACIÓN... (ON)";
+            btn.className = "btn-toggle on";
+            
+            // Intentar mantener la pantalla encendida si el navegador lo permite
+            if ('wakeLock' in navigator) { navigator.wakeLock.request('screen'); }
+
+            watchID = navigator.geolocation.watchPosition(pos => {
+                console.log("Nueva ubicación enviada:", pos.coords.latitude, pos.coords.longitude);
+                // Aquí iría el código para actualizar Supabase o Firebase
+            }, err => alert("Activa el GPS para poder trabajar"), { enableHighAccuracy: true });
+
+        } else {
+            btn.innerText = "ACTIVAR MODO CHOFER (ESTOY DISPONIBLE)";
+            btn.className = "btn-toggle off";
+            if (watchID) navigator.geolocation.clearWatch(watchID);
+        }
+    }
+
+    // INICIO AUTOMÁTICO
+    window.onload = () => {
+        if ("geolocation" in navigator) {
+            navigator.geolocation.getCurrentPosition(p => {
+                actualizarLista(p.coords.latitude, p.coords.longitude);
+            }, () => {
+                document.getElementById("status-msg").innerText = "Error: Activa el GPS";
+            });
+        }
+    };
+</script>
+
+</body>
+</html>
