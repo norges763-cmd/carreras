@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Carreras | Santiago de Cuba</title>
@@ -59,6 +62,7 @@
 <body>
 
 <header>CARRERAS SANTIAGO</header>
+<div id="map" style="height: 300px; width: 100%; border-bottom: 2px solid var(--accent);"></div>
 
 <div class="container">
     <div class="status-bar">
@@ -101,9 +105,20 @@
     }
 
     // 3. ACTUALIZAR INTERFAZ
+    let map;
     function actualizarLista(miLat, miLng) {
         const listaDiv = document.getElementById("lista-choferes");
         const statusMsg = document.getElementById("status-msg");
+ // 1. INICIALIZAR EL MAPA
+    if (!mapa) {
+        mapa = L.map('map').setView([miLat, miLng], 14);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap'
+        }).addTo(mapa);
+        
+        // Marcador de tu ubicación
+        L.marker([miLat, miLng]).addTo(mapa).bindPopup("Tú estás aquí").openPopup();
+    }
 
         // Ordenar choferes por cercanía
         const ordenados = choferesEnSantiago
@@ -111,7 +126,13 @@
             .sort((a, b) => a.dist - b.dist);
 
         statusMsg.innerText = `Cerca de ti (${ordenados.length} disponibles)`;
-        
+ // 3. PONER CHOFERES EN EL MAPA
+    ordenados.forEach(ch => {
+        L.marker([ch.lat, ch.lng])
+            .addTo(mapa)
+            .bindPopup(`<b>${ch.nombre}</b><br>${ch.tipo}`);
+    });
+  // 4. MOSTRAR LISTA
         listaDiv.innerHTML = ordenados.map(ch => `
             <div class="chofer-card">
                 <div class="info">
