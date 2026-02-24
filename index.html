@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Carreras | Santiago de Cuba</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -10,30 +10,60 @@
 
     <style>
         :root { --accent: #f3b01a; --bg: #121212; --card: #1e1e1e; --text: #ffffff; }
-        body { margin: 0; font-family: sans-serif; background: var(--bg); color: var(--text); }
+        
+        /* Uso de Flexbox para manejar la pantalla dividida fácilmente */
+        body { 
+            margin: 0; padding: 0; font-family: sans-serif; 
+            background: var(--bg); color: var(--text);
+            height: 100vh; display: flex; flex-direction: column; overflow: hidden;
+        }
         
         header { 
             background: var(--accent); color: black; padding: 15px; 
             text-align: center; font-weight: bold; font-size: 1.2em;
-            position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+            flex: 0 0 auto; z-index: 100; box-shadow: 0 2px 10px rgba(0,0,0,0.5);
         }
         
-        .container { padding: 15px; }
+        /* El mapa toma todo el espacio disponible al inicio */
+        #map { 
+            flex: 1 1 auto; 
+            width: 100%; 
+            transition: all 0.3s ease; /* Animación suave al encogerse */
+        }
         
+        /* Cuando se activa la vista dividida, el mapa ocupa el 45% de la altura */
+        #map.map-half {
+            flex: 0 0 45vh;
+            border-bottom: 2px solid var(--accent);
+        }
+        
+        /* Contenedor de la lista oculto por defecto */
+        #lista-container { 
+            display: none; 
+            flex: 1 1 auto; 
+            overflow-y: auto; /* Permite scroll solo en la lista */
+            padding: 15px; 
+            box-sizing: border-box;
+        }
+
+        #lista-container.active {
+            display: block;
+            animation: slideUp 0.4s ease;
+        }
+
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
         .status-bar { 
             background: #222; padding: 12px; border-radius: 8px; 
             margin-bottom: 15px; font-size: 0.9em; border-left: 4px solid var(--accent);
             display: flex; justify-content: space-between; align-items: center;
         }
 
-        /* Lista de Choferes */
         .chofer-card { 
             background: var(--card); border-radius: 12px; padding: 15px; 
             margin-bottom: 12px; display: flex; justify-content: space-between; 
             align-items: center; border: 1px solid #333;
-            animation: fadeIn 0.5s ease;
         }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
         .info b { display: block; font-size: 1.1em; color: var(--accent); margin-bottom: 4px; }
         .info span { color: #888; font-size: 0.85em; }
@@ -45,118 +75,50 @@
         }
         .btn-call:active { transform: scale(0.95); background: #218838; }
 
-        /* Panel del Chofer Inferior */
-        .driver-panel {
-            position: fixed; bottom: 0; width: 100%; background: #181818; 
-            padding: 15px; box-sizing: border-box; border-top: 2px solid var(--accent);
-            box-shadow: 0 -5px 15px rgba(0,0,0,0.5);
+        .banner-gps {
+            position: absolute; top: 70px; left: 5%; width: 90%;
+            z-index: 1000; background: rgba(30, 30, 30, 0.95);
+            border: 1px solid var(--accent); border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
         }
-        .btn-toggle {
-            width: 100%; padding: 15px; border: none; border-radius: 10px;
-            font-weight: bold; cursor: pointer; font-size: 1em; transition: 0.3s;
-        }
-        .off { background: #444; color: white; }
-        .on { background: var(--accent); color: black; box-shadow: 0 0 15px var(--accent); }
-.banner-gps {
-    position: absolute;
-    top: 70px; /* Se pone debajo del header */
-    left: 5%;
-    width: 90%;
-    z-index: 1000;
-    background: rgba(30, 30, 30, 0.95);
-    border: 1px solid var(--accent);
-    border-radius: 12px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-}
 
-.banner-content {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 10px;
-    gap: 8px;
-}
-
-.banner-content p {
-    color: white;
-    font-size: 0.8em;
-    margin: 0;
-}
-
-.btn-aceptar {
-    background: var(--accent);
-    color: black;
-    border: none;
-    padding: 6px 10px;
-    border-radius: 8px;
-    font-weight: bold;
-    font-size: 0.7em;
-    cursor: pointer;
-}
-
-.btn-cerrar-banner {
-    background: transparent;
-    color: #888;
-    border: none;
-    font-size: 1.1em;
-}
-
+        .banner-content { display: flex; align-items: center; justify-content: space-between; padding: 10px; gap: 8px; }
+        .banner-content p { color: white; font-size: 0.8em; margin: 0; }
+        .btn-aceptar { background: var(--accent); color: black; border: none; padding: 6px 10px; border-radius: 8px; font-weight: bold; font-size: 0.7em; cursor: pointer; }
+        .btn-cerrar-banner { background: transparent; color: #888; border: none; font-size: 1.1em; }
     </style>
 </head>
 <body>
 
 <header>CARRERAS SANTIAGO</header>
-<div id="banner-gps" class="banner-gps"> <div class="banner-content">
-        <p>📍 Señala tu ubicación o usa el GPS.</p>
-        <button class="btn-aceptar" onclick="usarGPS()">ACEPTAR (GPS)</button>
+
+<div id="banner-gps" class="banner-gps"> 
+    <div class="banner-content">
+        <p>📍 Mantén presionado el mapa o usa tu GPS.</p>
+        <button class="btn-aceptar" onclick="usarGPS()">USAR GPS</button>
         <button class="btn-cerrar-banner" onclick="cerrarBanner()">✕</button>
     </div>
 </div>
 
-<div id="map" style="height: 300px; width: 100%; border-bottom: 2px solid var(--accent);"></div>
+<div id="map"></div>
 
-<div class="container">
+<div id="lista-container">
     <div class="status-bar">
-        <span id="status-msg">Ubicando GPS...</span>
+        <span id="status-msg">Buscando choferes...</span>
         <span id="loader">📍</span>
     </div>
-    
     <div id="lista-choferes"></div>
 </div>
 
-<div style="height: 110px;"></div>
-
-<div class="driver-panel">
-    <button id="main-toggle" class="btn-toggle off" onclick="toggleModoChofer()">
-        ACTIVAR MODO CHOFER (ESTOY DISPONIBLE)
-    </button>
-</div>
-
 <script>
-let marcadorUsuario = null; // Para que solo haya un marcador azul a la vez
+    let mimapa = null;
+    let marcadoresChoferes = null;
+    let marcadorUsuario = null;
 
-    // --- PEGA ESTO AQUÍ ---
-    function cerrarBanner() {
-        document.getElementById("banner-gps").style.display = "none";
-    }
+    // Coordenadas centrales de Santiago de Cuba por defecto
+    const santiagoCentro = [20.0208, -75.8267];
 
-    function usarGPS() {
-        cerrarBanner(); // Cerramos el aviso
-        if ("geolocation" in navigator) {
-            navigator.geolocation.getCurrentPosition(p => {
-                actualizarLista(p.coords.latitude, p.coords.longitude);
-            }, (error) => {
-                alert("No se pudo acceder al GPS");
-            });
-        }
-    }
-
-    let modoChoferActivo = false;
-    let watchID = null;
-    let mimapa = null; // Nombre correcto de la variable
-    let marcadoresChoferes = null; // Capa para limpiar los marcadores viejos
-
-    // 1. DATOS DE PRUEBA
+    // 1. DATOS DE PRUEBA (Choferes)
     const choferesEnSantiago = [
         { id: 1, nombre: "Yoel Estrada", tipo: "Moto", tel: "+5350000000", lat: 20.0215, lng: -75.8294 },
         { id: 2, nombre: "Carlos Lada", tipo: "Auto", tel: "+5351111111", lat: 20.0310, lng: -75.8210 },
@@ -164,7 +126,59 @@ let marcadorUsuario = null; // Para que solo haya un marcador azul a la vez
         { id: 4, nombre: "Pepe Motorina", tipo: "Moto", tel: "+5353333333", lat: 20.0250, lng: -75.8150 }
     ];
 
-    // 2. CÁLCULO DE DISTANCIA
+    // 2. INICIALIZAR MAPA A PANTALLA COMPLETA
+    window.onload = () => {
+        // Inicializamos centrado en Santiago, sin pedir GPS todavía
+        mimapa = L.map('map').setView(santiagoCentro, 13);
+        
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap'
+        }).addTo(mimapa);
+        
+        marcadoresChoferes = L.layerGroup().addTo(mimapa);
+
+        // EVENTO: Pulsación larga (móvil) o clic derecho (PC)
+        mimapa.on('contextmenu', (e) => {
+            activarModoSeleccion(e.latlng.lat, e.latlng.lng);
+        });
+    };
+
+    // 3. FUNCIONES DEL BANNER Y GPS OPCIONAL
+    function cerrarBanner() {
+        document.getElementById("banner-gps").style.display = "none";
+    }
+
+    function usarGPS() {
+        cerrarBanner();
+        if ("geolocation" in navigator) {
+            navigator.geolocation.getCurrentPosition(p => {
+                activarModoSeleccion(p.coords.latitude, p.coords.longitude);
+            }, (error) => {
+                alert("No pudimos acceder al GPS. Mantén presionado el mapa para fijar tu ubicación manualmente.");
+            });
+        }
+    }
+
+    // 4. CAMBIO DE INTERFAZ (Dividir pantalla)
+    function activarModoSeleccion(miLat, miLng) {
+        // Ocultar banner si sigue activo
+        cerrarBanner();
+
+        // Achicar el mapa y mostrar la lista
+        document.getElementById('map').className = 'map-half';
+        document.getElementById('lista-container').classList.add('active');
+
+        // IMPORTANTE: Avisar a Leaflet que el contenedor del mapa cambió de tamaño
+        // para que no se vea el fondo gris y reajuste el centro
+        setTimeout(() => {
+            mimapa.invalidateSize();
+            mimapa.setView([miLat, miLng], 14); // Centramos en la nueva ubicación
+        }, 300);
+
+        actualizarDatos(miLat, miLng);
+    }
+
+    // 5. CÁLCULO DE DISTANCIA
     function calcularDistancia(lat1, lon1, lat2, lon2) {
         const R = 6371; // Radio de la Tierra en km
         const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -174,103 +188,49 @@ let marcadorUsuario = null; // Para que solo haya un marcador azul a la vez
         return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
     }
 
-    // 3. ACTUALIZAR INTERFAZ Y MAPA
-    function actualizarLista(miLat, miLng) {
+    // 6. ACTUALIZAR MARCADORES Y LISTA
+    function actualizarDatos(miLat, miLng) {
         const listaDiv = document.getElementById("lista-choferes");
         const statusMsg = document.getElementById("status-msg");
 
-        // 3.1 INICIALIZAR EL MAPA SOLO LA PRIMERA VEZ
-        if (mimapa === null) {
-            mimapa = L.map('map').setView([miLat, miLng], 14);
-mimapa.on('click', (e) => {
-            actualizarLista(e.latlng.lat, e.latlng.lng);
-        });          
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '© OpenStreetMap'
-            }).addTo(mimapa);
-            
-            // Crear el grupo de marcadores
-            marcadoresChoferes = L.layerGroup().addTo(mimapa);
-  } else {
-            // Si ya existe, solo movemos la vista si es necesario
-            mimapa.setView([miLat, miLng]);
+        // Actualizar el marcador del usuario (Azul por defecto)
+        if (marcadorUsuario) {
+            mimapa.removeLayer(marcadorUsuario);
         }
-            
-if (marcadorUsuario) {
-    mimapa.removeLayer(marcadorUsuario);
-}
-// Crear el nuevo marcador
-marcadorUsuario = L.marker([miLat, miLng]).addTo(mimapa).bindPopup("<b>Recogida aquí</b>").openPopup();
+        marcadorUsuario = L.marker([miLat, miLng]).addTo(mimapa).bindPopup("<b>Te recogerán aquí</b>").openPopup();
 
+        // Limpiar choferes anteriores
+        marcadoresChoferes.clearLayers();
 
-        // 3.2 ORDENAR CHOFERES POR CERCANÍA
+        // Ordenar choferes por cercanía
         const ordenados = choferesEnSantiago
             .map(ch => ({ ...ch, dist: calcularDistancia(miLat, miLng, ch.lat, ch.lng) }))
             .sort((a, b) => a.dist - b.dist);
 
         statusMsg.innerText = `Cerca de ti (${ordenados.length} disponibles)`;
 
-        // 3.3 LIMPIAR MARCADORES ANTERIORES Y PONER LOS NUEVOS
-        if (marcadoresChoferes) {
-            marcadoresChoferes.clearLayers();
-        }
+        // Colocar marcadores de choferes y armar el HTML de la lista
+        let htmlLista = "";
         
         ordenados.forEach(ch => {
             L.marker([ch.lat, ch.lng])
                 .addTo(marcadoresChoferes)
                 .bindPopup(`<b>${ch.nombre}</b><br>${ch.tipo}`);
+
+            htmlLista += `
+                <div class="chofer-card">
+                    <div class="info">
+                        <b>${ch.nombre}</b>
+                        <span>${ch.tipo} • A ${ch.dist.toFixed(2)} km</span>
+                    </div>
+                    <a href="tel:${ch.tel}" class="btn-call">LLAMAR</a>
+                </div>
+            `;
         });
 
-        // 3.4 MOSTRAR LA LISTA DE TEXTO ABAJO
-        listaDiv.innerHTML = ordenados.map(ch => `
-            <div class="chofer-card">
-                <div class="info">
-                    <b>${ch.nombre}</b>
-                    <span>${ch.tipo} • A ${ch.dist.toFixed(2)} km</span>
-                </div>
-                <a href="tel:${ch.tel}" class="btn-call">LLAMAR</a>
-            </div>
-        `).join('');
+        listaDiv.innerHTML = htmlLista;
     }
-
-    // 4. LÓGICA MODO CHOFER
-    function toggleModoChofer() {
-        const btn = document.getElementById("main-toggle");
-        modoChoferActivo = !modoChoferActivo;
-
-        if (modoChoferActivo) {
-            btn.innerText = "TRANSMITIENDO UBICACIÓN... (ON)";
-            btn.className = "btn-toggle on";
-            
-            if ('wakeLock' in navigator) { navigator.wakeLock.request('screen'); }
-
-            watchID = navigator.geolocation.watchPosition(pos => {
-                console.log("Nueva ubicación enviada:", pos.coords.latitude, pos.coords.longitude);
-                // Actualizamos tu lista local cada vez que te mueves
-                actualizarLista(pos.coords.latitude, pos.coords.longitude);
-            }, err => alert("Activa el GPS para poder trabajar"), { enableHighAccuracy: true });
-
-        } else {
-            btn.innerText = "ACTIVAR MODO CHOFER (ESTOY DISPONIBLE)";
-            btn.className = "btn-toggle off";
-            if (watchID) navigator.geolocation.clearWatch(watchID);
-        }
-    }
-
-    // 5. INICIO AUTOMÁTICO AL ABRIR LA APP
-    window.onload = () => {
-        if ("geolocation" in navigator) {
-            navigator.geolocation.getCurrentPosition(p => {
-                actualizarLista(p.coords.latitude, p.coords.longitude);
-            }, (error) => {
-                document.getElementById("status-msg").innerText = "Error: Permite el acceso al GPS";
-            }, { enableHighAccuracy: true });
-        } else {
-            document.getElementById("status-msg").innerText = "Tu navegador no soporta GPS";
-        }
-    };
 </script>
 
 </body>
-
 </html>
