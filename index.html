@@ -11,47 +11,56 @@
     <style>
         :root { --accent: #f3b01a; --bg: #121212; --card: #1e1e1e; --text: #ffffff; }
         
+        /* 1. LAYOUT PRINCIPAL (Flexbox estricto en columna) */
         body { 
             margin: 0; padding: 0; font-family: sans-serif; 
             background: var(--bg); color: var(--text);
-            height: 100vh; display: flex; flex-direction: column; overflow: hidden;
+            height: 100vh; 
+            display: flex; 
+            flex-direction: column; 
+            overflow: hidden; 
         }
         
-        header { 
+        #main-header { 
             background: var(--accent); color: black; padding: 15px; 
             text-align: center; font-weight: bold; font-size: 1.2em;
-            flex: 0 0 auto; z-index: 100; box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+            flex: 0 0 auto; /* El header no cambia de tamaño */
+            z-index: 1000; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.5);
         }
         
-        /* Ocultar atribución de Leaflet */
+        /* Ocultar atribución */
         .leaflet-control-attribution { display: none !important; }
 
-        /* Contenedor del Mapa */
+        /* 2. EL MAPA (Ocupa todo el espacio sobrante) */
         #map { 
             width: 100%; 
-            height: 100%; /* Inicia a pantalla completa (menos el header) */
-            flex: none; 
+            flex: 1 1 auto; /* Crece para ocupar el espacio que la lista deje libre */
+            position: relative; 
+            z-index: 1; /* Se queda al fondo */
+            min-height: 20vh; /* Nunca será más pequeño que el 20% de la pantalla */
         }
         
-        /* Contenedor de la Lista (El panel deslizable) */
+        /* 3. LA LISTA (Empuja al mapa) */
         #lista-container { 
-            display: none; /* Oculto al inicio */
+            display: none; /* Se activa en JS cambiándolo a 'flex' */
             width: 100%;
             background: var(--bg);
-            z-index: 1001;
+            flex: 0 0 auto; /* Tamaño fijo definido por el usuario al arrastrar */
+            flex-direction: column;
             border-top: 2px solid var(--accent);
             border-radius: 20px 20px 0 0;
-            flex-direction: column;
-            box-shadow: 0 -5px 15px rgba(0,0,0,0.5);
+            z-index: 1000;
+            box-shadow: 0 -5px 15px rgba(0,0,0,0.8);
         }
 
-        /* El área de donde el usuario arrastrará el panel */
         .drag-area {
             padding: 15px 0;
             display: flex;
             justify-content: center;
             cursor: grab;
-            touch-action: none; /* Previene scroll de la página al arrastrar esto */
+            touch-action: none; /* Evita que el navegador haga scroll de página */
+            flex: 0 0 auto;
         }
 
         .drag-handle {
@@ -61,13 +70,13 @@
             border-radius: 10px;
         }
 
-        /* Área de la lista que sí tiene scroll */
         .lista-scroll-content {
-            flex: 1;
+            flex: 1 1 auto;
             overflow-y: auto;
             padding: 0 15px 15px 15px;
         }
 
+        /* --- ESTILOS DE TARJETAS Y BANNER --- */
         .status-bar { 
             background: #222; padding: 12px; border-radius: 8px; 
             margin-bottom: 15px; font-size: 0.9em; border-left: 4px solid var(--accent);
@@ -85,13 +94,12 @@
         
         .btn-call { 
             background: #28a745; color: white; text-decoration: none; 
-            padding: 12px 20px; border-radius: 8px; font-weight: bold; 
-            font-size: 0.9em; transition: 0.3s;
+            padding: 12px 20px; border-radius: 8px; font-weight: bold; font-size: 0.9em;
         }
 
         .banner-gps {
             position: absolute; top: 70px; left: 5%; width: 90%;
-            z-index: 1000; background: rgba(30, 30, 30, 0.95);
+            z-index: 2000; background: rgba(30, 30, 30, 0.95);
             border: 1px solid var(--accent); border-radius: 12px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.5);
         }
@@ -146,7 +154,7 @@
 
     const santiagoCentro = [20.0208, -75.8267];
 
-    // DEFINICIÓN DE MARCADORES (ROJO PARA USUARIO, AZUL PARA CHOFER)
+    // MARCADORES DE COLORES
     const IconoBase = L.Icon.extend({
         options: {
             shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
@@ -169,14 +177,17 @@
     ];
 
     window.onload = () => {
+        // Inicializa mapa
         mimapa = L.map('map', { zoomControl: false }).setView(santiagoCentro, 13);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mimapa);
         marcadoresChoferes = L.layerGroup().addTo(mimapa);
 
+        // Evento pulsación larga
         mimapa.on('contextmenu', (e) => {
             activarModoSeleccion(e.latlng.lat, e.latlng.lng);
         });
 
+        // Activar la función de arrastre del Bottom Sheet
         iniciarArrastrePanel();
     };
 
@@ -187,26 +198,19 @@
         if ("geolocation" in navigator) {
             navigator.geolocation.getCurrentPosition(p => {
                 activarModoSeleccion(p.coords.latitude, p.coords.longitude);
-            }, () => alert("GPS desactivado o sin señal. Usa el mapa manualmente."));
+            }, () => alert("GPS desactivado."));
         }
     }
 
     function activarModoSeleccion(miLat, miLng) {
         cerrarBanner();
-        
-        const mapElement = document.getElementById('map');
         const panel = document.getElementById('lista-container');
-        const headerHeight = document.getElementById('main-header').offsetHeight;
-        const espacioDisponible = window.innerHeight - headerHeight;
         
-        // Dividir la pantalla 50% / 50%
-        const mitad = espacioDisponible / 2;
-
+        // Mostrar panel ocupando el 50% de la pantalla visible
         panel.style.display = 'flex';
-        panel.style.height = mitad + 'px';
-        mapElement.style.height = mitad + 'px';
+        panel.style.height = '50vh'; 
 
-        // Avisar a Leaflet del nuevo tamaño
+        // Actualizar datos del mapa (Retardo para asegurar que el DOM actualizó el tamaño)
         setTimeout(() => {
             mimapa.invalidateSize();
             mimapa.setView([miLat, miLng], 15);
@@ -215,44 +219,45 @@
         actualizarDatos(miLat, miLng);
     }
 
-    // --- LÓGICA DE ARRASTRE DEL PANEL (BOTTOM SHEET) ---
+    // --- LÓGICA DE ARRASTRE MEJORADA ---
     function iniciarArrastrePanel() {
-        const dragArea = document.getElementById('drag-area');
         const panel = document.getElementById('lista-container');
-        const mapElement = document.getElementById('map');
+        const dragArea = document.getElementById('drag-area');
         
         let isDragging = false;
-        let startY, startPanelHeight;
+        let startY, startHeight;
 
         dragArea.addEventListener('touchstart', (e) => {
             isDragging = true;
             startY = e.touches[0].clientY;
-            startPanelHeight = panel.offsetHeight;
+            startHeight = panel.offsetHeight; // Guardamos la altura de la lista al tocar
         }, { passive: true });
 
         window.addEventListener('touchmove', (e) => {
             if (!isDragging) return;
 
             const currentY = e.touches[0].clientY;
-            const deltaY = startY - currentY; // Cuánto movimos el dedo
-            const nuevaAlturaPanel = startPanelHeight + deltaY;
+            const deltaY = startY - currentY; // Cuánto deslizamos el dedo
+            let nuevaAltura = startHeight + deltaY;
             
-            const headerHeight = document.getElementById('main-header').offsetHeight;
-            const espacioDisponible = window.innerHeight - headerHeight;
+            // Límites para que no tape todo ni desaparezca
+            const alturaMaxima = window.innerHeight * 0.80; // Máximo 80% de la pantalla
+            const alturaMinima = window.innerHeight * 0.20; // Mínimo 20% de la pantalla
 
-            // Limitar para que el panel no ocupe toda la pantalla ni desaparezca del todo
-            const alturaMinima = espacioDisponible * 0.15; // 15% de la pantalla
-            const alturaMaxima = espacioDisponible * 0.85; // 85% de la pantalla
+            if (nuevaAltura > alturaMaxima) nuevaAltura = alturaMaxima;
+            if (nuevaAltura < alturaMinima) nuevaAltura = alturaMinima;
 
-            if (nuevaAlturaPanel > alturaMinima && nuevaAlturaPanel < alturaMaxima) {
-                panel.style.height = nuevaAlturaPanel + 'px';
-                mapElement.style.height = (espacioDisponible - nuevaAlturaPanel) + 'px';
-                mimapa.invalidateSize(); // Ajustar el mapa al momento
-            }
+            // Al darle la altura fija a la lista, Flexbox comprime automáticamente el mapa
+            panel.style.height = nuevaAltura + 'px';
+            
+            // Le decimos al mapa que se reajuste al nuevo espacio en tiempo real
+            mimapa.invalidateSize(); 
         }, { passive: true });
 
         window.addEventListener('touchend', () => {
             isDragging = false;
+            // Aseguramos que el mapa se dibuje bien al soltar
+            setTimeout(() => mimapa.invalidateSize(), 100);
         });
     }
 
@@ -271,7 +276,7 @@
 
         if (marcadorUsuario) { mimapa.removeLayer(marcadorUsuario); }
         
-        // MARCADOR DEL USUARIO (ROJO)
+        // Usuario (ROJO)
         marcadorUsuario = L.marker([miLat, miLng], { icon: iconoRojo })
             .addTo(mimapa)
             .bindPopup("<b>Tu ubicación de recogida</b>")
@@ -287,7 +292,7 @@
 
         let htmlLista = "";
         ordenados.forEach(ch => {
-            // MARCADORES DE LOS CHOFERES (AZUL)
+            // Choferes (AZUL)
             L.marker([ch.lat, ch.lng], { icon: iconoAzul })
                 .addTo(marcadoresChoferes)
                 .bindPopup(`<b>${ch.nombre}</b><br>${ch.tipo}`);
