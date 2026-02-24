@@ -57,11 +57,61 @@
         }
         .off { background: #444; color: white; }
         .on { background: var(--accent); color: black; box-shadow: 0 0 15px var(--accent); }
+.banner-gps {
+    position: absolute;
+    top: 70px; /* Se pone debajo del header */
+    left: 5%;
+    width: 90%;
+    z-index: 1000;
+    background: rgba(30, 30, 30, 0.95);
+    border: 1px solid var(--accent);
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+}
+
+.banner-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px;
+    gap: 8px;
+}
+
+.banner-content p {
+    color: white;
+    font-size: 0.8em;
+    margin: 0;
+}
+
+.btn-aceptar {
+    background: var(--accent);
+    color: black;
+    border: none;
+    padding: 6px 10px;
+    border-radius: 8px;
+    font-weight: bold;
+    font-size: 0.7em;
+    cursor: pointer;
+}
+
+.btn-cerrar-banner {
+    background: transparent;
+    color: #888;
+    border: none;
+    font-size: 1.1em;
+}
+
     </style>
 </head>
 <body>
 
 <header>CARRERAS SANTIAGO</header>
+<div id="banner-gps" class="banner-gps"> <div class="banner-content">
+        <p>📍 Señala tu ubicación o usa el GPS.</p>
+        <button class="btn-aceptar" onclick="usarGPS()">ACEPTAR (GPS)</button>
+        <button class="btn-cerrar-banner" onclick="cerrarBanner()">✕</button>
+    </div>
+</div>
 
 <div id="map" style="height: 300px; width: 100%; border-bottom: 2px solid var(--accent);"></div>
 
@@ -83,6 +133,24 @@
 </div>
 
 <script>
+let marcadorUsuario = null; // Para que solo haya un marcador azul a la vez
+
+    // --- PEGA ESTO AQUÍ ---
+    function cerrarBanner() {
+        document.getElementById("banner-gps").style.display = "none";
+    }
+
+    function usarGPS() {
+        cerrarBanner(); // Cerramos el aviso
+        if ("geolocation" in navigator) {
+            navigator.geolocation.getCurrentPosition(p => {
+                actualizarLista(p.coords.latitude, p.coords.longitude);
+            }, (error) => {
+                alert("No se pudo acceder al GPS");
+            });
+        }
+    }
+
     let modoChoferActivo = false;
     let watchID = null;
     let mimapa = null; // Nombre correcto de la variable
@@ -114,19 +182,26 @@
         // 3.1 INICIALIZAR EL MAPA SOLO LA PRIMERA VEZ
         if (mimapa === null) {
             mimapa = L.map('map').setView([miLat, miLng], 14);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+mimapa.on('click', (e) => {
+            actualizarLista(e.latlng.lat, e.latlng.lng);
+        });          
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '© OpenStreetMap'
             }).addTo(mimapa);
             
             // Crear el grupo de marcadores
             marcadoresChoferes = L.layerGroup().addTo(mimapa);
-            
-            // Tu ubicación inicial
-            L.marker([miLat, miLng]).addTo(mimapa).bindPopup("<b>Tú estás aquí</b>").openPopup();
-        } else {
-            // Si el mapa ya existe, centrarlo en tu nueva posición
+  } else {
+            // Si ya existe, solo movemos la vista si es necesario
             mimapa.setView([miLat, miLng]);
         }
+            
+if (marcadorUsuario) {
+    mimapa.removeLayer(marcadorUsuario);
+}
+// Crear el nuevo marcador
+marcadorUsuario = L.marker([miLat, miLng]).addTo(mimapa).bindPopup("<b>Recogida aquí</b>").openPopup();
+
 
         // 3.2 ORDENAR CHOFERES POR CERCANÍA
         const ordenados = choferesEnSantiago
@@ -197,4 +272,5 @@
 </script>
 
 </body>
+
 </html>
