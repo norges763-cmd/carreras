@@ -114,15 +114,45 @@
             text-align: center; font-size: 0.7em; color: #444; 
             margin-top: 20px; padding-bottom: 20px; font-style: italic;
         }
+#btn-norte {
+    position: absolute;
+    top: 80px; /* Debajo del header */
+    right: 20px;
+    z-index: 1000;
+    background: white;
+    border: 2px solid var(--accent);
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    outline: none;transition: all 0.3s ease;
+    -webkit-tap-highlight-color: transparent;
+}
+
+#icono-giro {
+    font-size: 30px;
+    color: #333;
+    font-weight: bold;
+    display: inline-block;
+    line-height: 1;
+}
+        }
     </style>
 </head>
-<body>
+<body ontouchstart="">
 
 <header id="main-header">CARRERAS SANTIAGO</header>
+<button id="btn-norte" onclick="ejecutarGiro()" title="Orientar mapa">
+    <span id="icono-giro">↻</span>
+</button>
 
 <div id="banner-gps" class="banner-gps"> 
     <div class="banner-content">
-        <p>📍 Mantén presionado el mapa para pedir.</p>
+      <p>📍 Mantén presionado el mapa para pedir.</p>
         <button class="btn-aceptar" onclick="usarGPS()">USAR GPS</button>
         <button class="btn-cerrar-banner" onclick="cerrarBanner()">✕</button>
     </div>
@@ -150,9 +180,11 @@
 </div>
 
 <script>
-    let mimapa = null;
-    let marcadoresChoferes = null;
-    let marcadorUsuario = null;
+let rotacionActiva = true; // <--- Ponla aquí solita
+
+     mimapa = null;
+    marcadoresChoferes = null;
+     marcadorUsuario = null;
 
     const santiagoCentro = [20.0208, -75.8267];
 
@@ -313,6 +345,34 @@
         });
         listaHtmlDiv.innerHTML = htmlLista;
     }
+function ejecutarGiro() {
+    const icono = document.getElementById('icono-giro');
+    const boton = document.getElementById('btn-norte');
+    
+    // Cambiamos el estado (si era true pasa a false, y viceversa)
+    rotacionActiva = !rotacionActiva;
+
+    if (rotacionActiva) {
+        // MODO: LIBRE (Se puede girar con dos dedos)
+        mimapa.touchRotate.enable(); 
+        icono.innerText = "↻"; 
+        icono.style.color = "#333"; 
+        boton.style.borderColor = "var(--accent)";
+        boton.style.background = "white";
+    } else {
+        // MODO: BLOQUEADO (El mapa se queda fijo donde esté)
+        mimapa.touchRotate.disable();
+        icono.innerText = "🔒"; // Cambiamos el icono a un candado
+        icono.style.color = "#888"; 
+        boton.style.borderColor = "#555";
+        boton.style.background = "#eee";
+    }
+    
+    // Pequeña animación visual al tocar
+    boton.style.transform = 'scale(0.9)';
+    setTimeout(() => { boton.style.transform = 'scale(1)'; }, 100);
+}
+
 </script>
 
 </body>
