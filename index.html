@@ -163,7 +163,13 @@
     cursor: pointer;
     box-shadow: 0 4px 10px rgba(0,0,0,0.3);
     -webkit-tap-highlight-color: transparent;}
-.leaflet-compass { display: none !important; }
+.leaflet-compass,
+.leaflet-control-compass, 
+.leaflet-rotate-control
+{ display: none !important; visibility: hidden !important; 
+    opacity: 0 !important; 
+    pointer-events: none !important; 
+}
 
     </style>
 </head>
@@ -240,6 +246,7 @@ let rotacionActiva = true; // <--- Ponla aquí solita
   mimapa = L.map('map', { 
         zoomControl: false,
         rotate: true, touchRotate: true,
+compassControl: false,
         snapToAngle: 15 }).setView(santiagoCentro, 13);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mimapa);
         marcadoresChoferes = L.layerGroup().addTo(mimapa);
