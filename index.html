@@ -7,6 +7,8 @@
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-rotate@0.2.8/dist/leaflet-rotate.js"></script>
+
 
     <style>
         :root { --accent: #f3b01a; --bg: #121212; --card: #1e1e1e; --text: #ffffff; }
@@ -177,8 +179,10 @@
     ];
 
     window.onload = () => {
-        // Inicializa mapa
-        mimapa = L.map('map', { zoomControl: false }).setView(santiagoCentro, 13);
+  mimapa = L.map('map', { 
+        zoomControl: false,
+        rotate: true, touchRotate: true,
+        snapToAngle: 15 }).setView(santiagoCentro, 13);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mimapa);
         marcadoresChoferes = L.layerGroup().addTo(mimapa);
 
