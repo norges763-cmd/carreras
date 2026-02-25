@@ -117,7 +117,7 @@
 #btn-norte {
     position: absolute;
     top: 80px; /* Debajo del header */
-    right: 20px;
+    left: 20px;
     z-index: 1000;
     background: white;
     border: 2px solid var(--accent);
@@ -140,7 +140,30 @@
     display: inline-block;
     line-height: 1;
 }
-        }
+.zoom-controls {
+    position: absolute;
+    top: 80px;
+    right: 20px;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;        }
+.btn-zoom {
+    width: 50px;
+    height: 50px;
+    background: white;
+    border: 2px solid var(--accent);
+    border-radius: 50%;
+    font-size: 24px;
+    font-weight: bold;
+    color: #333;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    -webkit-tap-highlight-color: transparent;
+}
     </style>
 </head>
 <body ontouchstart="">
@@ -149,7 +172,9 @@
 <button id="btn-norte" onclick="ejecutarGiro()" title="Orientar mapa">
     <span id="icono-giro">↻</span>
 </button>
-
+<div class="zoom-controls">
+    <button class="btn-zoom" onclick="mimapa.zoomIn()">+</button>
+    <button class="btn-zoom" onclick="mimapa.zoomOut()">−</button></div>
 <div id="banner-gps" class="banner-gps"> 
     <div class="banner-content">
       <p>📍 Mantén presionado el mapa para pedir.</p>
