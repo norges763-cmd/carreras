@@ -246,10 +246,14 @@ let rotacionActiva = true; // <--- Ponla aquí solita
   mimapa = L.map('map', { 
         zoomControl: false,
         rotate: true, touchRotate: true,
-compassControl: false,
+        compassControl: false,
         snapToAngle: 15 }).setView(santiagoCentro, 13);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mimapa);
+if (mimapa.compassControl) {
+        mimapa.compassControl.remove();
         marcadoresChoferes = L.layerGroup().addTo(mimapa);
+}
+
 
         // Evento pulsación larga
         mimapa.on('contextmenu', (e) => {
