@@ -234,22 +234,27 @@
 
     function cerrarBanner() { document.getElementById("banner-gps").style.display = "none"; }
 
-    function usarGPS() {
+        function usarGPS() {
         cerrarBanner();
         if ("geolocation" in navigator) {
-const opcionesGps = {
-            enableHighAccuracy: true,
-            timeout: 10000, 
-            maximumAge: 0 
-        };
-            navigator.geolocation.getCurrentPosition(p => {
-                activarModoSeleccion(p.coords.latitude, p.coords.longitude);
-            }, 
-            () => alert("GPS desactivado.");
-        },
-opcionesGps);
-       }
+            const opcionesGps = {
+                enableHighAccuracy: true,
+                timeout: 15000, 
+                maximumAge: 0 
+            };
+
+            navigator.geolocation.getCurrentPosition(
+                p => {
+                    activarModoSeleccion(p.coords.latitude, p.coords.longitude);
+                }, 
+                () => { 
+                    alert("GPS desactivado o sin señal."); 
+                }, 
+                opcionesGps
+            );
+        }
     }
+
 
     function activarModoSeleccion(miLat, miLng) {
         cerrarBanner();
