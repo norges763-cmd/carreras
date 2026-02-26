@@ -235,26 +235,41 @@
     function cerrarBanner() { document.getElementById("banner-gps").style.display = "none"; }
 
         function usarGPS() {
-        cerrarBanner();
-        if ("geolocation" in navigator) {
-            const opcionesGps = {
-                enableHighAccuracy: true,
-                timeout: 15000, 
-                maximumAge: 0 
-            };
+    cerrarBanner();
+    if ("geolocation" in navigator) {
+        const opcionesGps = {
+            enableHighAccuracy: true,
+            timeout: 15000,
+            maximumAge: 0
+        };
 
-            navigator.geolocation.getCurrentPosition(
-                p => {
+        // Mostramos un mensaje temporal de "Calibrando..."
+        document.getElementById("status-msg").innerText = "Calibrando GPS (buscando precisión)...";
+        document.getElementById("lista-container").style.display = 'flex';
+
+        const watchId = navigator.geolocation.watchPosition(
+            p => {
+                const precision = p.coords.accuracy;
+                console.log("Precisión actual: " + precision + " metros");
+
+                // Si la precisión es menor a 20 metros (muy buena), nos quedamos con esa
+                if (precision <= 20) {
                     activarModoSeleccion(p.coords.latitude, p.coords.longitude);
-                }, 
-                () => { 
-                    alert("GPS desactivado o sin señal."); 
-                }, 
-                opcionesGps
-            );
-        }
-    }
+                    mimapa.setView([p.coords.latitude, p.coords.longitude], 18);
+                    navigator.geolocation.clearWatch(watchId); // Detenemos el sensor para ahorrar batería
+                } else {
+                    // Si es mala precisión, marcamos el punto pero seguimos buscando
+                    activarModoSeleccion(p.coords.latitude, p.coords.longitude);
+                }
+            },
+            () => { alert("Error de GPS. Activa la 'Alta Precisión' en los ajustes de tu móvil."); },
+            opcionesGps
+        );
 
+        // Si después de 7 segundos no bajó de 20 metros, nos quedamos con la mejor que tenga
+        setTimeout(() => navigator.geolocation.clearWatch(watchId), 7000);
+    }
+}
 
     function activarModoSeleccion(miLat, miLng) {
         cerrarBanner();
