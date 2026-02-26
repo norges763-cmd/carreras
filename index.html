@@ -237,10 +237,18 @@
     function usarGPS() {
         cerrarBanner();
         if ("geolocation" in navigator) {
+const opcionesGps = {
+            enableHighAccuracy: true,
+            timeout: 10000, 
+            maximumAge: 0 
+        };
             navigator.geolocation.getCurrentPosition(p => {
                 activarModoSeleccion(p.coords.latitude, p.coords.longitude);
-            }, () => alert("GPS desactivado."));
-        }
+            }, 
+            () => alert("GPS desactivado.");
+        },
+opcionesGps);
+       }
     }
 
     function activarModoSeleccion(miLat, miLng) {
