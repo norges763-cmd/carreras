@@ -350,6 +350,18 @@
             .addTo(mimapa)
             .bindPopup("<b>Tu ubicación de recogida</b>")
             .openPopup();
+if (window.miCirculo) { 
+            mimapa.removeLayer(window.miCirculo); 
+        } 
+        window.miCirculo = L.circle([miLat, miLng], {
+            radius: 20, // metros
+            color: '#1a73e8',
+            fillColor: '#1a73e8',
+            fillOpacity: 0.2,
+            weight: 1,
+            interactive: false
+        }).addTo(mimapa);
+
 
         marcadoresChoferes.clearLayers();
 
